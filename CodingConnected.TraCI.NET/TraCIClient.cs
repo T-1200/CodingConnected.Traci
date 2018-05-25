@@ -6,8 +6,10 @@ using System.Net.Sockets;
 using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
+using CodingConnected.TraCI.NET;
 using CodingConnected.TraCI.NET.Commands;
 using CodingConnected.TraCI.NET.Helpers;
+using UnityEngine;
 
 #if NLOG
 using NLog;
@@ -28,7 +30,7 @@ namespace CodingConnected.TraCI.NET
 
         #region Fields
 
-        private TcpClient _client;
+        public TcpClient _client;
         private NetworkStream _stream;
         private readonly byte[] _receiveBuffer = new byte[32768];
 	    private ControlCommands _control;
@@ -104,7 +106,125 @@ namespace CodingConnected.TraCI.NET
             _stream = _client.GetStream();
         }
 
+		public void CloseConnection()
+		{
+			if (_stream != null) {
+				_stream.Close();
+				Debug.Log("CloseConnection():\n _stream closed."); }
+			else {
+				Debug.Log("CloseConnection():\n NO STREAM TO CLOSE!"); }
+				
+			if (_client != null) {
+				_client.Close();
+				Debug.Log("CloseConnection():\n _client closed."); }
+			else {
+				Debug.Log("CloseConnection():\n NO CLIENT TO CLOSE!"); }
+		}
+
+		internal void voidSendMessage(TraCICommand command)
+		{
+			/*
+			- void does not return information;
+				--> just sending data without any acknowledgement
+			*/
+			
+		    if (!_client.Connected) {
+				Debug.Log("voidSendMessage():\nno client connected...(!)");
+		    }
+
+			try {
+				Debug.Log("voidSendMessage():\nContents.Length: " + command.Contents.Length);
+				var msg = TraCIDataConverter.GetMessageBytes(command);
+				_client.Client.Send(msg);
+				Debug.Log("voidSendMessage():\nmsg sent...(!)");
+			}
+			catch {
+				Debug.Log("voidSendMessage():\nmessage could not be sent.");
+			}
+		}
+
+	    internal TraCIResult[] SendMessage(TraCICommand command)
+	    {
+			// check connection:
+		    if (!_client.Connected) {
+				Debug.Log("SendMessage():\nno client connected...(!)");
+			    return null;
+		    }
+
+			// send command:
+			try
+			{
+				var msg = TraCIDataConverter.GetMessageBytes(command);
+				Debug.Log("SendMessage():\nsize of msg to send: " + msg.Length);
+		    	_client.Client.Send(msg);
+				Debug.Log("SendMessage():\nmsg sent...(!)");
+			}
+			catch
+			{
+				Debug.Log("SendMessage():\nmessage could not be sent.");
+				return null;
+			}
+
+			// parse response:
+		    try
+		    {
+			    var bytesRead = _stream.Read(_receiveBuffer, 0, 32768);
+			    if (bytesRead < 0)
+			    {
+				    // Read returns 0 if the client closes the connection
+					Debug.Log("SendMessage():\nNOTHING TO READ!");
+				    throw new IOException();
+			    }
+
+				// Debug.Log("SendMessage():\ngot something to read --> grabbing 'response' next...");
+			    var response = _receiveBuffer.Take(bytesRead).ToArray();
+
+				int laenge = response.Length;
+				if (laenge <= 0) {
+					// Abbruch und kein Parsen (der nicht vorhandenen Antwort)
+					Debug.Log("SendMessage():\nWTF WTF WTF WTF: returning null (ABORTING!!); response length <= 0: " + laenge.ToString());
+					return null;
+					}
+				else {
+					// do the usual stuff!
+
+					// Debug.Log("SendMessage():\nresponse length > 0: " + laenge.ToString());
+
+					// #if NLOG
+					//                 _logger.Trace(" << {0}", BitConverter.ToString(response));
+					// #endif
+
+					Debug.Log("SendMessage():\nstepping into HandleResponse(response)");
+					var trresponse = TraCIDataConverter.HandleResponse(response);
+
+					/*
+					- this part is only to verify content of handled response!
+					- some stuff doenst have response value, so this cant be always checked with trresponse[1]!
+					*/
+					int len = trresponse[trresponse.Length-1].Length;
+					int len2 = trresponse[0].Length;
+					Debug.Log("SendMessage(): trresponse[trresponse.Length-1].Length returned by HandleResponse():\n" + len + " (" + len2 + ")");
+					byte ident = trresponse[trresponse.Length-1].Identifier;
+					byte[] array = trresponse[trresponse.Length-1].Response;
+
+					string _tostring = BitConverter.ToString(new[]{ident});
+					string _array = BitConverter.ToString(array);
+					Debug.Log(	"SendMessage():\nparsed received stream: length: " + trresponse?.Length
+								+ ", firstbyte-length: " + len.ToString() + ", first-byte-id: " + _tostring
+								+ ", return-array: " + _array
+					);
+
+					return trresponse?.Length > 0 ? trresponse : null;
+				}
+		    }
+		    catch
+		    {
+				Debug.Log ("SendMessage():\ncould not parse received stream...");
+			    return null; // TODO
+		    }
+	    }
         #endregion // Public Methods
+
 
         #region Set Variable Methods
 
@@ -144,43 +264,11 @@ namespace CodingConnected.TraCI.NET
 
 		#endregion // Set Variable Methods
 
-		#region Public Methods
-
-	    internal TraCIResult[] SendMessage(TraCICommand command)
-	    {
-		    if (!_client.Connected)
-		    {
-			    return null;
-		    }
-
-		    var msg = TraCIDataConverter.GetMessageBytes(command);
-		    _client.Client.Send(msg);
-		    try
-		    {
-			    var bytesRead = _stream.Read(_receiveBuffer, 0, 32768);
-			    if (bytesRead < 0)
-			    {
-				    // Read returns 0 if the client closes the connection
-				    throw new IOException();
-			    }
-			    var response = _receiveBuffer.Take(bytesRead).ToArray();
-#if NLOG
-                _logger.Trace(" << {0}", BitConverter.ToString(response));
-#endif
-			    var trresponse = TraCIDataConverter.HandleResponse(response);
-			    return trresponse?.Length > 0 ? trresponse : null;
-		    }
-		    catch
-		    {
-			    return null; // TODO
-		    }
-	    }
-
-		#endregion // Public Methods
 
 		#region Private Methods
 
 		#endregion // Private Methods
+
 
 		#region Constructor
 

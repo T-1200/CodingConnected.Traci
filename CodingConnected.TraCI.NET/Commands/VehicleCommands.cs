@@ -9,6 +9,42 @@ namespace CodingConnected.TraCI.NET.Commands
 	{
 		#region Public Methods
 
+		public List<ComposedTypeBase> VehicleValueSubscription(string id, byte[] messageTypes)
+		// public void VehicleValueSubscription(string id, byte[] messageTypes)
+		{
+			// TODO: verify!
+			/*
+			command: 0xd4; response: 0xe4
+			- returns nothing currently
+			- command just invokes the subscription of vehicle variables
+			*/
+
+			int begintime = 0;		// 0 ms
+			int endtime = 2147483647;	// from "subscribe" here: http://www.sumo.dlr.de/daily/pydoc/traci._simulation.html
+			// --> this is max int value!
+			// int endtime = 1000;
+
+			return
+				TraCICommandHelper.ExecuteSubCommand<List<ComposedTypeBase>>(
+					Client,
+					id,												// vehicle id as string
+					TraCIConstants.CMD_SUBSCRIBE_VEHICLE_VARIABLE,	// commandType
+					messageTypes,									// messagetypes
+					begintime,
+					endtime
+					);
+			/*
+			TraCICommandHelper.voidExecuteSubCommand<List<ComposedTypeBase>>(
+				Client,
+				id,												// vehicle id as string
+				TraCIConstants.CMD_SUBSCRIBE_VEHICLE_VARIABLE,	// commandType
+				messageTypes,									// messagetypes
+				begintime,
+				endtime
+				);
+			*/
+		}
+
 		public List<string> GetIdList()
 		{
 			return

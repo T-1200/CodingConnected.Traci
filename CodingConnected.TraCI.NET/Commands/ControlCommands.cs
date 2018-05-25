@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using CodingConnected.TraCI.NET.Helpers;
+using CodingConnected.TraCI.NET.Types;
 
 namespace CodingConnected.TraCI.NET.Commands
 {
@@ -61,11 +62,78 @@ namespace CodingConnected.TraCI.NET.Commands
 				Identifier = TraCIConstants.CMD_SIMSTEP,
 				Contents = TraCIDataConverter.GetTraCIBytesFromInt32(targetTime)
 			};
+
 			// ReSharper disable once UnusedVariable
-			var response = Client.SendMessage(command);
-			// TODO: handle response
+			var response = Client.SendMessage(command);  // returns TraCIResult[]
+
+			UnityEngine.Debug.Log("SimStep():\nEND of function; got response; length: " + response.Length);
 		}
 
+		// public T returnSimStep<T>(byte[] subsarray, int targetTime = 0)
+		public List<double> returnSimStep(byte[] subsarray, int targetTime = 0)
+		{	
+			//TODO: return value has to be generalized
+
+			UnityEngine.Debug.Log("returnSimStep():\ninside function!");
+
+			// for correct parsing:
+			byte identimus = TraCIConstants.CMD_SUBSCRIBE_VEHICLE_VARIABLE;
+
+			// byte msgtypus = TraCIConstants.TYPE_COMPOUND;
+			// wird mit der Funktion uebergeben --> subsarray
+
+			/*
+			- this is the usual command for SimStep-request!
+			- procedure according to TraCICommandHelper.ExecuteCommand()
+				- create command
+				- get response via SendMessage()
+				- try return TraCIDataConverter.ExtractDataFromResponse(input:
+					- response (TraCIResult
+					- commandType (TraCICommand)	--> Identifier
+					- messageType (TraCIConstant)	--> dunno, is just a constant. usual integrated in Contents i think)
+			*/
+
+			var command = new TraCICommand
+			{
+				Identifier = TraCIConstants.CMD_SIMSTEP,
+				Contents = TraCIDataConverter.GetTraCIBytesFromInt32(targetTime)
+			};
+
+			var response = Client.SendMessage(command);
+			// response is output of (/parsed by) HandleResponse() of format TraCIResult[]
+
+			if (response == null) {
+				UnityEngine.Debug.Log("returnSimStep():\nresponse is 'null' --> skipping ExtractDataFromResponse()...");
+				return null;
+				// return default(T);  // but should return null
+			} else {
+				UnityEngine.Debug.Log("returnSimStep():\nresponse has content to be working with.");
+			}
+
+			try
+			{
+				UnityEngine.Debug.Log("SimStep():\n stepping into ExtractDataFromResponse()");
+				return (List<double>)TraCIDataConverter.ExtractDataFromSubResponse(response, identimus, subsarray);
+				// return (List<ComposedTypeBase>)TraCIDataConverter.ExtractDataFromResponse(response, identimus, subsarray);
+			}
+			catch
+			{
+				UnityEngine.Debug.Log("SimStep():\nthrowing exception! ...");
+				throw;
+			}
+
+		}
+
+		public void voidSimStep(int targetTime = 0)
+		{
+			var command = new TraCICommand
+			{
+				Identifier = TraCIConstants.CMD_SIMSTEP,
+				Contents = TraCIDataConverter.GetTraCIBytesFromInt32(targetTime)
+			};
+			Client.voidSendMessage(command);
+			// Console.WriteLine("SimStep()\ndid one step further.");
+		}
 		
 		/// <summary>
 		/// Instruct SUMO to stop the simulation and close
@@ -81,8 +149,20 @@ namespace CodingConnected.TraCI.NET.Commands
 			var response = Client.SendMessage(command);
 		}
 
+		public void voidClose()
+		{
+			var command = new TraCICommand
+			{
+				Identifier = TraCIConstants.CMD_CLOSE,
+				Contents = null
+			};
+			// ReSharper disable once UnusedVariable
+			// var response = Client.SendMessage(command);
+			Client.voidSendMessage(command);
+		}
+
 		/// <summary>
-		/// Tells TraCI to reload the simulation with the given options
+		/// Tells TraCI to reload the simulation with the given optionsvoidSendMessage
 		/// <remarks>Loading does not work when using multiple clients, currently</remarks>
 		/// </summary>
 		/// <param name="options">List of options to pass to SUMO</param>
