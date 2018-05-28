@@ -15,12 +15,9 @@ namespace CodingConnected.TraCI.NET.Helpers
 		{
 			if (response?.Length > 0)
 			{
-				UnityEngine.Debug.Log("ExtractDataFromResponse():\nGOT INTO ExtractDataFromResponse! response has content to be working with.");
-
 				var r1 = response.FirstOrDefault(x => x.Identifier == commandType);
 				if (r1?.Response[0] == 0x00) // Success
 				{
-					UnityEngine.Debug.Log("ExtractDataFromResponse():\nsuccess");
 					// check if first byte is as requested (it gives the type of data requested)
 					var r2 = response.FirstOrDefault(x => x.Identifier == commandType + 0x10);
 					if (r2?.Response[0] == messageType)
@@ -32,7 +29,6 @@ namespace CodingConnected.TraCI.NET.Helpers
 						var type = r2.Response[5 + idl];
 
 						// now read and translate the data
-						UnityEngine.Debug.Log("ExtractDataFromResponse():\nhopping into GetValueFromTypeAndArray");
 						return GetValueFromTypeAndArray(type, r2.Response.Skip(6 + idl).ToArray());
 					}
 
@@ -41,7 +37,6 @@ namespace CodingConnected.TraCI.NET.Helpers
 
 				if (r1?.Response[0] == 0xFF) // Failed
 				{
-					UnityEngine.Debug.Log("ExtractDataFromResponse():\nfailed.");
 					var take = r1.Response.Skip(1).Take(4).Reverse().ToArray();
 					var dlen = BitConverter.ToInt32(take, 0);
 					var sb = new StringBuilder();
@@ -56,7 +51,6 @@ namespace CodingConnected.TraCI.NET.Helpers
 
 				if (r1?.Response[0] == 0x01) // Not implemented
 				{
-					UnityEngine.Debug.Log("ExtractDataFromResponse():\nnot implemented...");
 					var take = r1.Response.Skip(1).Take(4).Reverse().ToArray();
 					var dlen = BitConverter.ToInt32(take, 0);
 					var sb = new StringBuilder();
@@ -72,25 +66,13 @@ namespace CodingConnected.TraCI.NET.Helpers
 			return null;
 		}
 
-
-		/*
-		BEGIN OF INSERT!
-		new ExtractDataFromResponse!
-		*/
-
 		internal static object ExtractDataFromSubResponse(TraCIResult[] response, byte commandType, byte[] messageType)
 		{
 			byte[] take;
 
-			//TODO/ msgtype[] are variables!
-
-			UnityEngine.Debug.Log("ExtractDataFromSubResponse():\nGOT INTO ExtractDataFromSubResponse! response has content to be working with.");
-
 			if (response?.Length > 0)  // response? ermoeglicht rueckgabe von 'null'!
 			{
-				// get actual response-content:
 				var r2 = response.FirstOrDefault(x => x.Identifier == commandType + 0x10);
-				UnityEngine.Debug.Log("ExtractDataFromSubResponse():\nEXAMINE BYTE ARRAY FOR PLAUSABILITY!: " + r2.Response.ToString());
 
 				/*
 				r2.Response[0]:	ObjectID - string
@@ -102,43 +84,22 @@ namespace CodingConnected.TraCI.NET.Helpers
 				r2.Response[6]:	Variable 2 ...
 				*/
 
-				/* nicht auf (einzelnes) byte anwendbar:
-				byte[] tempstring = r2.Response[0].Take(4).Reverse().ToArray();
-				byte[] tempstring = r2.Response[0].ToArray();
-				*/
-
 				byte[] tempstring = new byte[] {r2.Response[0]};
 				byte[] vaco = new byte[] {r2.Response[1]};
-
 				string objectID = BitConverter.ToString(tempstring.Reverse().ToArray(), 0);
 				int idlength = BitConverter.ToInt32(tempstring.Reverse().ToArray(), 0);
-				// int variableCount = BitConverter.ToInt32(r2.Response[1].Reverse().ToArray(), 0);
 				int variableCount = BitConverter.ToInt32(vaco.Reverse().ToArray(), 0);
 
-
-				// retrieving variables out of the msgtypes-array again:
 				List<byte> byteslist = messageType.ToList();
-
-				// print above info:
-				UnityEngine.Debug.Log("ExtractDataFromSubResponse()\nExtracting Data for ID: "
-									+ objectID + ", is this the same(?): " + idlength
-									+ ", amount of return values should be 2 is: "
-									+ variableCount.ToString()
-									);
-				UnityEngine.Debug.Log("ExtractDataFromSubResponse()\nlist-length: " + byteslist.Count
-									+ ", first msg-type: " + byteslist[0]
-									+ ", second msg-type: " + byteslist[1]
-									);
 
 				// check for compliance of subscribed msg-types!
 				if (byteslist.Count != variableCount)
 				{
-					UnityEngine.Debug.Log("ExtractDataFromSubResponse()\nERROR: BYTELIST-LENGTH != AMOUNT OF SUBSCRIBED VARIABLES!");
 					return null;
 				}
 				else
 				{
-					UnityEngine.Debug.Log("ExtractDataFromSubResponse()\nall good: bytelist-length == amount of subscribed variables!");
+					// UnityEngine.Debug.Log("ExtractDataFromSubResponse()\nall good: bytelist-length == amount of subscribed variables!");
 				}
 
 				int iteriere = 0;
@@ -146,8 +107,7 @@ namespace CodingConnected.TraCI.NET.Helpers
 				// get new array from r2.Response without objectID and VarCount:s
 				var responseData = r2.Response.Skip(idlength+1).ToArray();
 
-				//TODO: generate list to write in! after foreach: return that list!
-				//TODO: this has to be some kind of dynamic later on.
+				//TODO: generate list to write in! after foreach: return that list; has got to be generalized later!
 				List<double> liste = new List<double>();
 
 				// iterate through msg-types to retrieve information
@@ -155,88 +115,42 @@ namespace CodingConnected.TraCI.NET.Helpers
 				{
 					Console.WriteLine("current msgtype-byte is: {0}", bite.ToString());
 
-					//TODO
-					//TODO
-					//TODO: HIER ALLES UEBERRPRUEFEN!!
-					//TODO
-					//TODO
-
 					take = new byte[] {0};  // empty filled array!
 
-					/*
-					COLLECT RELEVANT DATA
-						take relevant stuff of variable n (bite)
-						first skip nothing, then skip 8
-						x++ gibt x aus, zaehlt dann eins weiter.
-					*/
 					take = responseData.Skip((iteriere) * 8).Take(8).Reverse().ToArray();
 					iteriere++;
-					UnityEngine.Debug.Log("ExtractDataFromSubResponse()\nEXAMMINE THIS ARRAY: " + take.ToString() );
-					// TODO: check unitl here:
 					byte varz = take[0];
-					UnityEngine.Debug.Log("ExtractDataFromSubResponse()\nEXAMMINE THIS: variable is (?): " + varz.ToString() );
-					// byte success = take.Skip(1).Take(1);
 					byte success = take[1];
-					UnityEngine.Debug.Log("ExtractDataFromSubResponse()\nEXAMMINE THIS: success(?): " + success.ToString() );
-					byte tuep = take[2];
-					UnityEngine.Debug.Log("ExtractDataFromSubResponse()\nEXAMMINE THIS: type(?): " + tuep.ToString() );
+					byte typ = take[2];
 
-
-					/*
-					verify success ("variable status")
-					and use above collected data
-					*/
 					if (success == 0x00)
 					{
 						// verify message-type
 						if (varz == bite) {
 							// retriev idl
 							// retriev type
-							// ggfs empty take
 
-							// after the type of data, there is the length of the id (a string that we will skip)
-							// var take = responseData.Skip(1).Take(4).Reverse().ToArray();
-							// var idl = BitConverter.ToInt32(take, 0);
-							// after the string is the type of data returned
-							// var type = r2.Response[5 + idl];
-
-							// interpret value by type and array: return GetValueFromTypeAndArray(type, r2.Response.Skip(6 + idl).ToArray());
-							//TODO: MORE LIKE APPEND TO ABOVE CREATED LIST!
 							var temp = GetValueFromTypeAndArray(tuep, responseData.Skip(3).ToArray());
 							// as temp should currently return doubles:
 							liste.Add((double)temp);
 
 						} else {
-							UnityEngine.Debug.Log("ExtractDataFromSubResponse()\nmsg-type couldnt be verified...");
 							throw new TraCICommandException(commandType, bite, "No TraCI response was found in the data");
 						}
 					}
 					else
 					{
-						UnityEngine.Debug.Log("ExtractDataFromSubResponse()\nSUBSCRIPTION NOT SUCCESSFUL!!");
 						// return null;  // cant return or for-loop will be cancelled.
 					}						
 				}
 
 				return liste;
-
-				/* or:
-				for (var i = 0; i < myMoney.Count; i++) {
-					Console.WriteLine("Amount is {0} and type is {1}", myMoney[i].amount, myMoney[i].type);
-				}
-				*/
 			}
 			else
 			{
-				UnityEngine.Debug.Log("ExtractDataFromSubResponse():\nSOMETHING WENT WRONG - NO RESPONSE-CONTENT. RETURNING null");
 				return null;
 			}
 		}
-
-		/*
-		END OF INSERT!
-		*/
-
 
 		internal static byte[] GetTraCIBytesFromInt32(int i)
         {
@@ -257,24 +171,11 @@ namespace CodingConnected.TraCI.NET.Helpers
 	        int length, count;
 	        var sb = new StringBuilder();
 			var amount = 0;
-			string _array;  // for printing
+			string _array;
 
             switch (type)
             {
-				/*
-				following stuff new from here...
-				*/
-
 				case 0x01:
-					/*
-					return array is:
-					42-00-00-00-01-30-01-40-97-2C-45-69-AF-F8-24-40-99-27-A5-02-E8-D6-52
-
-					response-byte array after parsing:
-										 40-97-2C-45-69-AF-F8-24-40-99-27-A5-02-E8-D6-52
-					
-					*/
-
 					var _pos2d = new Position2D();
 
 					// using 8-byte-steps
@@ -294,8 +195,6 @@ namespace CodingConnected.TraCI.NET.Helpers
 					return _pos2d;
 				
 				case 0x03:
-					// _array = BitConverter.ToString(array);
-					// UnityEngine.Debug.Log("TraCIDataConverter():\ncase: 0x03: input response-byte array: " + _array);
 
 					var k_new = 8;
 					amount = 8;
@@ -315,10 +214,6 @@ namespace CodingConnected.TraCI.NET.Helpers
 					amount = 0;
 
 					return _pos3d;
-
-				/*
-				...until here.
-				*/
 
                 case 0x07:
                     return array[0];
@@ -363,7 +258,6 @@ namespace CodingConnected.TraCI.NET.Helpers
 					}
 					return list;
 				case 0x0F:
-					UnityEngine.Debug.Log("DataConverter():\ninside case 0x0F; trying to parse!");
 					take = array.Take(4).Reverse().ToArray();
 					count = BitConverter.ToInt32(take, 0);
 					var ctlist = new List<ComposedTypeBase>();
@@ -499,7 +393,6 @@ namespace CodingConnected.TraCI.NET.Helpers
             var cmessages = new List<List<byte>>();
             foreach (var c in commands)
             {
-				UnityEngine.Debug.Log("GetMessageBytes():\nc.Contents.Length: " + c.Contents.Length);
                 var cmessage = new List<byte>();
                 if (c.Contents == null)
                 {
@@ -514,12 +407,10 @@ namespace CodingConnected.TraCI.NET.Helpers
                     cmessage.Add(0);
                     cmessage.AddRange(BitConverter.GetBytes(c.Contents.Length + 6).Reverse());
                 }
-				UnityEngine.Debug.Log("GetMessageBytes():\nadded range accordingly. adding identifier now.");
                 cmessage.Add(c.Identifier);
                 if (c.Contents != null)
                 {
                     cmessage.AddRange(c.Contents);
-					UnityEngine.Debug.Log("GetMessageBytes():\nadded Contents");
                 }
                 cmessages.Add(cmessage);
             }
@@ -536,11 +427,8 @@ namespace CodingConnected.TraCI.NET.Helpers
 			
             try
             {
-				// UnityEngine.Debug.Log("HandleResponse():\ninside try --> try parsing...");
-
                 var revLength = response.Take(4).Reverse().ToArray();
                 var totlength = BitConverter.ToInt32(revLength, 0);
-				// UnityEngine.Debug.Log("HandleResponse():\nrev/totLength is: " + totlength.ToString());
 
                 var i = 4;
                 var results = new List<TraCIResult>();
@@ -579,12 +467,10 @@ namespace CodingConnected.TraCI.NET.Helpers
                     results.Add(trresult);
                 }
 				
-				UnityEngine.Debug.Log("HandleResponse():\n returning results.ToArray()!");
                 return results.ToArray();
             }
             catch (IndexOutOfRangeException)
             {
-				UnityEngine.Debug.Log("HandleResponse():\nthrowing 'Index out of range'-exception");
                 return null;
             }
         }

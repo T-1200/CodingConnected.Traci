@@ -74,24 +74,7 @@ namespace CodingConnected.TraCI.NET.Commands
 		{	
 			//TODO: return value has to be generalized
 
-			UnityEngine.Debug.Log("returnSimStep():\ninside function!");
-
-			// for correct parsing:
 			byte identimus = TraCIConstants.CMD_SUBSCRIBE_VEHICLE_VARIABLE;
-
-			// byte msgtypus = TraCIConstants.TYPE_COMPOUND;
-			// wird mit der Funktion uebergeben --> subsarray
-
-			/*
-			- this is the usual command for SimStep-request!
-			- procedure according to TraCICommandHelper.ExecuteCommand()
-				- create command
-				- get response via SendMessage()
-				- try return TraCIDataConverter.ExtractDataFromResponse(input:
-					- response (TraCIResult
-					- commandType (TraCICommand)	--> Identifier
-					- messageType (TraCIConstant)	--> dunno, is just a constant. usual integrated in Contents i think)
-			*/
 
 			var command = new TraCICommand
 			{
@@ -100,25 +83,20 @@ namespace CodingConnected.TraCI.NET.Commands
 			};
 
 			var response = Client.SendMessage(command);
-			// response is output of (/parsed by) HandleResponse() of format TraCIResult[]
-
 			if (response == null) {
-				UnityEngine.Debug.Log("returnSimStep():\nresponse is 'null' --> skipping ExtractDataFromResponse()...");
 				return null;
-				// return default(T);  // but should return null
+				// return default(T);
 			} else {
-				UnityEngine.Debug.Log("returnSimStep():\nresponse has content to be working with.");
+				// UnityEngine.Debug.Log("returnSimStep():\nresponse has content to be working with.");
 			}
 
 			try
 			{
-				UnityEngine.Debug.Log("SimStep():\n stepping into ExtractDataFromResponse()");
 				return (List<double>)TraCIDataConverter.ExtractDataFromSubResponse(response, identimus, subsarray);
 				// return (List<ComposedTypeBase>)TraCIDataConverter.ExtractDataFromResponse(response, identimus, subsarray);
 			}
 			catch
 			{
-				UnityEngine.Debug.Log("SimStep():\nthrowing exception! ...");
 				throw;
 			}
 
@@ -132,7 +110,6 @@ namespace CodingConnected.TraCI.NET.Commands
 				Contents = TraCIDataConverter.GetTraCIBytesFromInt32(targetTime)
 			};
 			Client.voidSendMessage(command);
-			// Console.WriteLine("SimStep()\ndid one step further.");
 		}
 		
 		/// <summary>
@@ -156,8 +133,6 @@ namespace CodingConnected.TraCI.NET.Commands
 				Identifier = TraCIConstants.CMD_CLOSE,
 				Contents = null
 			};
-			// ReSharper disable once UnusedVariable
-			// var response = Client.SendMessage(command);
 			Client.voidSendMessage(command);
 		}
 
